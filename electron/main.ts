@@ -153,7 +153,8 @@ const activeTtsRequests = new Map<string, AbortController>();
 let isAppQuitting = false;
 const videoImportService = getVideoImportService();
 let appConfig: ResolvedAppConfig | null = null;
-const remotionBinariesDirectory = resolveRemotionRendererBinariesDir();
+let _remotionBinariesDir: string | null = null;
+let _remotionBinariesResolved = false;
 
 function sendMenuEvent(event: MenuEvent) {
   mainWindow?.webContents.send('menu-action', event);
@@ -434,15 +435,31 @@ function resolvePrebuiltRemotionBundleDir(): string | null {
   );
 }
 
+function getAppPathSafe(): string {
+  try {
+    return app.getAppPath();
+  } catch {
+    return path.resolve(__dirname, '..');
+  }
+}
+
 function resolveRemotionRendererBinariesDir(): string | null {
   return resolveRemotionBinariesDirectory({
-    appPath: app.getAppPath(),
+    appPath: getAppPathSafe(),
     cwd: process.cwd(),
     moduleDir: __dirname,
     platform: process.platform,
     arch: process.arch,
     existsSync,
   });
+}
+
+function getRemotionBinariesDirectory(): string | null {
+  if (!_remotionBinariesResolved) {
+    _remotionBinariesDir = resolveRemotionRendererBinariesDir();
+    _remotionBinariesResolved = true;
+  }
+  return _remotionBinariesDir;
 }
 
 async function materializeRenderAssets(
@@ -593,7 +610,7 @@ ipcMain.handle('parse-srt-file', async (_event, filePath: string) => {
 
 ipcMain.handle('get-audio-duration', async (_event, filePath: string) => {
   return readAudioDurationMs(filePath, {
-    binariesDirectory: remotionBinariesDirectory,
+    binariesDirectory: getRemotionBinariesDirectory(),
   });
 });
 
@@ -1489,7 +1506,7 @@ ipcMain.handle('add-asset', async () => {
   if (isAudio) {
     try {
       durationMs = await readAudioDurationMs(assetPath, {
-        binariesDirectory: remotionBinariesDirectory,
+        binariesDirectory: getRemotionBinariesDirectory(),
       });
     } catch {
       durationMs = 10000;
@@ -1499,7 +1516,7 @@ ipcMain.handle('add-asset', async () => {
   if (isVideo) {
     try {
       const metadata = await getVideoMetadata(assetPath, {
-        binariesDirectory: remotionBinariesDirectory,
+        binariesDirectory: getRemotionBinariesDirectory(),
       });
       const seconds = metadata.durationInSeconds;
       if (typeof seconds === 'number' && seconds > 0) {
@@ -1580,7 +1597,7 @@ ipcMain.handle('scan-project-assets', async (_event, projectDir: string) => {
       if (assetType === 'audio') {
         try {
           durationMs = await readAudioDurationMs(fullPath, {
-            binariesDirectory: remotionBinariesDirectory,
+            binariesDirectory: getRemotionBinariesDirectory(),
           });
         } catch {
           durationMs = 10000;
@@ -1590,7 +1607,7 @@ ipcMain.handle('scan-project-assets', async (_event, projectDir: string) => {
       if (assetType === 'video') {
         try {
           const metadata = await getVideoMetadata(fullPath, {
-            binariesDirectory: remotionBinariesDirectory,
+            binariesDirectory: getRemotionBinariesDirectory(),
           });
           const seconds = metadata.durationInSeconds;
           if (typeof seconds === 'number' && seconds > 0) {
@@ -1976,7 +1993,7 @@ ipcMain.handle(
       if (durationMs <= 0) {
         try {
           durationMs = await readAudioDurationMs(audioPath, {
-            binariesDirectory: remotionBinariesDirectory,
+            binariesDirectory: getRemotionBinariesDirectory(),
           });
         } catch (error) {
           writeAppLog(
@@ -2178,7 +2195,7 @@ ipcMain.handle(
         serveUrl,
         id: 'PodcastComposition',
         inputProps,
-        binariesDirectory: remotionBinariesDirectory,
+        binariesDirectory: getRemotionBinariesDirectory(),
       });
       if (isDev) {
         console.log(
@@ -2197,7 +2214,7 @@ ipcMain.handle(
         codec: 'h264',
         outputLocation: args.outputPath,
         inputProps,
-        binariesDirectory: remotionBinariesDirectory,
+        binariesDirectory: getRemotionBinariesDirectory(),
         concurrency: explicitConcurrency,
         x264Preset: renderConfig.x264Preset,
         videoBitrate: renderConfig.videoBitrate,
