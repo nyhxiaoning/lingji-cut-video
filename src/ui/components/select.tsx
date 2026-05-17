@@ -156,9 +156,11 @@ function useClickOutside(
 				onClose();
 			}
 		}
-		if (open) document.addEventListener("mousedown", handleClick);
-		return () => document.removeEventListener("mousedown", handleClick);
-	}, [open, onClose, ref]);
+			// 使用 click 而非 mousedown：下拉菜单通过 portal 渲染到 document.body，
+			// mousedown 会在 React 合成 onClick 之前触发 close，导致选项点击失效。
+			if (open) document.addEventListener("click", handleClick);
+			return () => document.removeEventListener("click", handleClick);
+		}, [open, onClose, ref]);
 }
 
 // ============================================================================

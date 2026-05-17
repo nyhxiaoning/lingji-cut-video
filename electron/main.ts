@@ -370,6 +370,20 @@ function createWindow() {
     writeAppLog('error', 'window', `渲染进程退出：${details.reason}`, String(details.exitCode));
   });
 
+  // 全局快捷键打开/关闭 DevTools，方便调试
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (input.type === 'keyDown' && input.key === 'F12') {
+      const cfg = getCurrentAppConfig();
+      const state = resolveDebugRuntimeState({
+        isPackaged: app.isPackaged,
+        debugMode: cfg.debugMode,
+      });
+      if (state.allowDevTools) {
+        mainWindow?.webContents.toggleDevTools();
+      }
+    }
+  });
+
   mainWindow.on('close', (event) => {
     const action = resolveWindowCloseAction({
       hasProject: menuContext.hasProject,
