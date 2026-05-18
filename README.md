@@ -1,4 +1,7 @@
 # Lingji Cut / 灵剪
+注意：如果pnpm安装不成功，使用yarn。
+
+- pnpm安装不成功，换用yarn。
 
 ![Lingji Cut hero](docs/assets/lingji-cut-hero.png)
 
