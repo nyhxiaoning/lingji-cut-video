@@ -37,6 +37,7 @@ import {
   type MinimaxSubtitleSentence,
   type MinimaxTtsResponse,
 } from '../src/lib/minimax-tts';
+import { generateEdgeTts } from './edge-tts';
 import { parseSrt } from '../src/lib/srt-parser';
 import type { SrtEntry, TimelineData } from '../src/types';
 import type { AICard, AISegment, AISettings, PromptBindingMap } from '../src/types/ai';
@@ -1874,24 +1875,55 @@ ipcMain.handle(
       model: string;
       apiKey: string;
       projectDir: string;
+      ttsProvider: string;
+      edgeTtsVoice: string;
     },
   ) => {
-    const { requestId, text, voiceId, speed, vol, pitch, emotion, model, apiKey, projectDir } =
+    const { requestId, text, voiceId, speed, vol, pitch, emotion, model, apiKey, projectDir, ttsProvider, edgeTtsVoice } =
       args;
     const controller = new AbortController();
     activeTtsRequests.set(requestId, controller);
     mainWindow?.webContents.send('tts-progress', 0);
 
-    // MiniMax t2a_v2 是同步接口，等待 30~120s。期间无回调信号，用估算心跳把进度从 2% 缓慢推到 30%，
-    // 避免 UI 视觉上"卡在 0%"。fetch 返回后会立刻覆盖到 35%。
-    let heartbeatPct = 2;
-    const HEARTBEAT_CEIL = 30;
-    const heartbeat = setInterval(() => {
-      if (heartbeatPct < HEARTBEAT_CEIL) {
-        heartbeatPct = Math.min(HEARTBEAT_CEIL, heartbeatPct + 1);
-        mainWindow?.webContents.send('tts-progress', heartbeatPct);
+    const isEdgeTts = ttsProvider === 'edge-tts';
+
+    if (isEdgeTts) {
+      // ===== Edge TTS (free, no API key needed) =====
+      writeAppLog('info', 'tts', 'Edge TTS 开始生成', `voice=${edgeTtsVoice}`);
+      mainWindow?.webContents.send('tts-progress', 10);
+
+      try {
+        const binariesDir = getRemotionBinariesDirectory();
+        const result = await generateEdgeTts(
+          text,
+          edgeTtsVoice || voiceId,
+          speed,
+          pitch,
+          projectDir,
+          binariesDir,
+        );
+
+        mainWindow?.webContents.send('tts-progress', 100);
+        writeAppLog('info', 'tts', 'Edge TTS 完成', `durationMs=${result.durationMs}`);
+
+        return { audioPath: result.audioPath, srtPath: result.srtPath, durationMs: result.durationMs };
+      } finally {
+        activeTtsRequests.delete(requestId);
       }
-    }, 1500);
+    }
+
+    // ===== MiniMax TTS =====
+      // MiniMax t2a_v2 是同步接口，等待 30~120s。期间无回调信号，用估算心跳把进度从 2% 缓慢推到 30%，
+      // 避免 UI 视觉上"卡在 0%"。fetch 返回后会立刻覆盖到 35%。
+      let heartbeat: ReturnType<typeof setInterval> | undefined;
+      let heartbeatPct = 2;
+      const HEARTBEAT_CEIL = 30;
+      heartbeat = setInterval(() => {
+        if (heartbeatPct < HEARTBEAT_CEIL) {
+          heartbeatPct = Math.min(HEARTBEAT_CEIL, heartbeatPct + 1);
+          mainWindow?.webContents.send('tts-progress', heartbeatPct);
+        }
+      }, 1500);
 
     try {
       const response = await fetch('https://api.minimaxi.com/v1/t2a_v2', {
@@ -2044,7 +2076,7 @@ ipcMain.handle(
       }
       throw error;
     } finally {
-      clearInterval(heartbeat);
+      if (heartbeat) clearInterval(heartbeat);
       activeTtsRequests.delete(requestId);
     }
   },

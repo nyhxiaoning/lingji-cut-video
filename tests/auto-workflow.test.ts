@@ -138,9 +138,10 @@ describe('useAIVideoWorkflow autoMode wiring (source contract)', () => {
     expect(source).toContain("workflowSession.originalText = options?.originalText ?? ''");
   });
 
-  it('TTS voiceId prefers autoParams.voiceId over settings.minimaxVoiceId', () => {
+  it('TTS voiceId prefers autoParams.voiceId over settings.minimaxVoiceId for MiniMax, uses edgeTtsVoice for Edge TTS', () => {
+    expect(source).toContain('settings.edgeTtsVoice');
     expect(source).toMatch(
-      /voiceId:\s*workflowSession\.autoParams\?\.voiceId\s*\|\|\s*settings\.minimaxVoiceId/,
+      /workflowSession\.autoParams\?\.voiceId\s*\|\|\s*settings\.minimaxVoiceId/,
     );
   });
 
@@ -196,12 +197,14 @@ describe('useAIVideoWorkflow autoMode guard fixes', () => {
     expect(source).toContain("fromStep !== 'script_generating' && !scriptText.trim()");
   });
 
-  it('extends MiniMax key pre-check to script_generating', async () => {
+  it('checks MiniMax API key for both tts_generating and script_generating', async () => {
     const fs = await import('node:fs/promises');
     const source = await fs.readFile(
       new URL('../src/hooks/useAIVideoWorkflow.ts', import.meta.url),
       'utf-8',
     );
-    expect(source).toContain("fromStep === 'tts_generating' || fromStep === 'script_generating'");
+    expect(source).toContain("fromStep === 'tts_generating' &&");
+    expect(source).toContain("fromStep === 'script_generating' &&");
+    expect(source).toContain("settings.ttsProvider !== 'edge-tts'");
   });
 });

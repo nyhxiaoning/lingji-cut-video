@@ -175,6 +175,8 @@ export interface AISettings {
   jimengApiUrl: string;
   jimengSessionId: string;
   jimengModel?: string;
+  // TTS provider selection
+  ttsProvider: 'minimax' | 'edge-tts';
   // MiniMax TTS
   minimaxApiKey: string;
   minimaxVoiceId: string;
@@ -183,6 +185,8 @@ export interface AISettings {
   minimaxPitch?: number;
   minimaxEmotion?: string;
   minimaxModel?: string;
+  // Edge TTS
+  edgeTtsVoice: string;
   // —— 新增：图像 Provider ——
   imageProviders: ImageProvider[];
   defaultImageProviderId: string | null;

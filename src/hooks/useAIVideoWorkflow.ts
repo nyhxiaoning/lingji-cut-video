@@ -395,7 +395,21 @@ export function useAIVideoWorkflow() {
       }
 
       if (
-        (fromStep === 'tts_generating' || fromStep === 'script_generating') &&
+        fromStep === 'tts_generating' &&
+        settings.ttsProvider !== 'edge-tts' &&
+        !settings.minimaxApiKey.trim()
+      ) {
+        setWorkflow({
+          ...DEFAULT_WORKFLOW,
+          step: 'error',
+          error: '请先在设置 → TTS 配置中填写 MiniMax API Key',
+          failedStep: fromStep,
+        });
+        return;
+      }
+
+      if (
+        fromStep === 'script_generating' &&
         !settings.minimaxApiKey.trim()
       ) {
         setWorkflow({
@@ -524,10 +538,11 @@ export function useAIVideoWorkflow() {
         });
 
         try {
+          const isEdgeTts = settings.ttsProvider === 'edge-tts';
           const ttsResult = await window.electronAPI.generateTTS({
             requestId: currentRequestId,
             text: scriptText,
-            voiceId: workflowSession.autoParams?.voiceId || settings.minimaxVoiceId || 'male-qn-qingse',
+            voiceId: isEdgeTts ? settings.edgeTtsVoice : (workflowSession.autoParams?.voiceId || settings.minimaxVoiceId || 'male-qn-qingse'),
             speed: settings.minimaxSpeed ?? 1,
             vol: settings.minimaxVol ?? 1,
             pitch: settings.minimaxPitch ?? 0,
@@ -535,6 +550,8 @@ export function useAIVideoWorkflow() {
             model: settings.minimaxModel ?? 'speech-2.8-hd',
             apiKey: settings.minimaxApiKey,
             projectDir,
+            ttsProvider: settings.ttsProvider ?? 'minimax',
+            edgeTtsVoice: settings.edgeTtsVoice ?? 'zh-CN-XiaoxiaoNeural',
           });
 
           cleanupProgress();

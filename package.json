@@ -75,6 +75,7 @@
     "date-fns": "^4.1.0",
     "diff": "^8.0.4",
     "diff-match-patch": "^1.0.5",
+    "edge-tts-universal": "^1.4.0",
     "fabric": "^6.9.1",
     "font-list": "^1.6.0",
     "framer-motion": "^12.38.0",

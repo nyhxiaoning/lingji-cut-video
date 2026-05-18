@@ -310,6 +310,8 @@ export interface ElectronAPI {
     model: string;
     apiKey: string;
     projectDir: string;
+    ttsProvider: string;
+    edgeTtsVoice: string;
   }) => Promise<{ audioPath: string; srtPath: string; durationMs: number }>;
   onTTSProgress: (callback: (pct: number) => void) => () => void;
   onAnalyzeProgress: (

@@ -216,6 +216,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     model: string;
     apiKey: string;
     projectDir: string;
+    ttsProvider: string;
+    edgeTtsVoice: string;
   }) => ipcRenderer.invoke('generate-tts', args),
   onTTSProgress: (callback: (pct: number) => void) => {
     const handler = (_event: unknown, pct: number) => callback(pct);

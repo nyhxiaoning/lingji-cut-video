@@ -174,6 +174,8 @@ export function AIConfigTab({ onRegisterLeaveGuard }: AIConfigTabProps) {
           minimaxApiKey: '',
           minimaxVoiceId: 'male-qn-qingse',
           minimaxSpeed: 1.0,
+          ttsProvider: 'minimax',
+          edgeTtsVoice: 'zh-CN-XiaoxiaoNeural',
           imageProviders: [],
           defaultImageProviderId: null,
           defaultImageModel: null,
